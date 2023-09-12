@@ -26,6 +26,7 @@ python3 bench.py --verbose ../queries/perf_agg_win_1.sql ../queries/perf_agg_win
 import argparse
 import asyncio
 import logging
+import os
 import statistics as stat
 from collections import defaultdict
 from itertools import combinations
@@ -35,9 +36,10 @@ from time import time
 from typing import DefaultDict
 
 import pandas as pd
+import pglast
 import psycopg
 import seaborn as sns
-from dotenv import dotenv_values
+from dotenv import dotenv_values, load_dotenv
 from psycopg_pool import AsyncConnectionPool, ConnectionPool
 from scipy.stats import kruskal, median_test, ttest_ind
 from tqdm import tqdm
@@ -47,9 +49,7 @@ from tqdm.asyncio import tqdm as atqdm
 logger = logging.getLogger("PERF")
 
 # charge les variables d'environnement, par défaut dans le fichier `.env`
-config = dotenv_values(".env")
-if config is None:
-    raise RuntimeError("You should provide .env")
+config = {**os.environ, **dotenv_values(".env")}  # type:ignore
 
 # postgres connection string, les variables d'environnement ne sont pas prises directement
 CONN_PARAMS = f"postgresql://{config['PGUSER']}:{config['PGPASSWORD']}@{config['PGHOST']}:{config['PGPORT']}/{config['PGDATABASE']}?application_name={config['PGAPPNAME']}"  # pylint: disable=line-too-long
@@ -209,7 +209,12 @@ def read_sql_files(filenames):
     for filename in filenames:
         with open(filename, "r", encoding="utf-8") as file:
             logger.info("loading %s...", filename)
-            yield Path(filename).name, file.read()
+            content = file.read()
+            try:
+                pglast.parse_sql(content)
+            except pglast.parser.ParseError as err:
+                raise RuntimeError(f"Cannot parse {filename}: {err}") from err
+            yield Path(filename).name, content
 
 
 def summary_stats(vals):
@@ -312,6 +317,7 @@ def main():
     logging.basicConfig(level=debug_level)
     logger.debug(vars(args))
     logger.debug(CONN_PARAMS)
+    logger.debug(f"{pglast.parser.get_postgresql_version()=}")
     logger.debug(f"psycopg: {psycopg.__version__}, libpq: {psycopg.pq.version()}")
 
     if args.repeat < 2:
@@ -320,9 +326,9 @@ def main():
     logger.info("Launching %i times each query (async=%s)", args.repeat, args.with_async)
 
     sql_contents = dict(read_sql_files(args.filenames))
-    if debug_level >= logging.DEBUG:
-        for key, content in sql_contents.items():
-            logger.debug("file %s\n%s", key, content)
+    for key, content in sql_contents.items():
+        if debug_level >= logging.DEBUG:
+            logger.debug("file %s\n\n%s\n", key, pglast.prettify(content))
 
     the_results = do_measures(sql_contents, args.repeat, args.with_async, args.full_async)
     print_stats(the_results)
