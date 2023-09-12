@@ -1,0 +1,30 @@
+[tool.black]
+line-length = 120
+
+[project]
+version = "1.0.0"
+name = "py-sql-bencher"
+readme = "README.md"
+description = "CLI tool to compare performance of SQL queries."
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [{ name = "THION Romuald", email = "romuald.thion@univ-lyon1.fr" }]
+keywords = ["posqtgres", "sql", "bench", "performance", "cli"]
+dependencies = [
+    "python-dotenv",
+    "psycopg",
+    "psycopg_pool",
+    "tqdm",
+    "scipy",
+    "pandas",
+    "seaborn",
+]
+
+[project.urls]
+Homepage = "https://github.com/romulusFR/py-sql-bencher"
+Documentation = "https://github.com/romulusFR/py-sql-bencher"
+Repository = "https://github.com/romulusFR/py-sql-bencher"
+Changelog = "https://github.com/romulusFR/py-sql-bencher"
+
+[project.scripts]
+py-sql-bencher = "py_sql_bencher:main"
