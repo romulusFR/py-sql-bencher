@@ -1,16 +1,13 @@
--- donner toutes les informations de chaque employé ainsi que
--- la différence entre son salaire et le salaire moyen de son équipe
--- version GROUP BY + JOIN
+-- all informations about all employees with the difference
+-- between his/her salary and the average one in his/her department
 
--- l'aggrégat sur emp
--- EXPLAIN
-WITH sal AS (
+-- GROUP BY + JOIN without MATERIALIZED (transparent/rewritten subquery) version
+WITH dep_salary AS (
     SELECT department_name, AVG(salary) as avg
     FROM employee GROUP BY department_name
 )
 
--- la jointure entre emp et l'agrégat
-SELECT employee.*, round(salary - sal.avg) AS delta
-FROM employee JOIN sal
-    ON employee.department_name = sal.department_name
+SELECT employee.*, round(salary - dep_salary.avg) AS delta
+FROM employee JOIN dep_salary
+    ON employee.department_name = dep_salary.department_name
 ORDER BY department_name, employee_id;

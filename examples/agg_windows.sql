@@ -1,12 +1,11 @@
--- donner toutes les informations de chaque employé ainsi que
--- la différence entre son salaire et le salaire moyen de son équipe
--- version WINDOWS
+-- all informations about all employees with the difference
+-- between his/her salary and the average one in his/her department
 
--- EXPLAIN
+-- WINDOWS function version
 SELECT
     employee.*,
-    round(salary - avg(salary) OVER w) AS delta
+    round(salary - avg(salary) OVER win) AS delta
 FROM employee
-WINDOW w AS (PARTITION BY department_name)
+WINDOW win AS (PARTITION BY department_name)
 ORDER BY department_name, employee_id;
 
